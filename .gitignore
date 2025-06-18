@@ -192,3 +192,10 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+### Config files
+# Ignore all YAML-files
+*.yaml
+
+# But allow all files that end with .template.yaml 
+!*.template.yaml
