@@ -1,0 +1,6 @@
+public_url: # The public url for the connector
+management_url_path: management # The url path to the management endpoint without api version (!and no leading/trailing "/"!)
+api_version: v3 # The EDC api version as part of the full management url.
+dsp_url: # The public url for the dsp (DataSpace Protocol) endpoint
+header_api_key: # The api key that must be provided in the header of REST calls due to authetication
+bpn: # The business partner number
