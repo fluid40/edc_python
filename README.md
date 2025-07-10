@@ -11,7 +11,7 @@ as a consumer yoe can query catalogs, manage EDR's (Endpoint Data Reference) and
 - [swaggerhub Tractus-X EDC](https://app.swaggerhub.com/apis/eclipse-tractusx-bot/tractusx-edc)
 
 ## Connector-Configs
-Make a copy of the template config file [connector_config.template.yaml](connector_config.template.yaml) and fill it out like this:
+Make a copy of the template config file [connector_config.template.yaml](src/edc_python/connector_config.template.yaml) and fill it out like this:
 ```yaml
 public_url: https://con-entity-1.my.connector.com
 management_url_path: management
@@ -31,3 +31,6 @@ except Exception as e:
     logger.error("Error initialzing connectors: %s", e)
     sys.exit(1)
 ```
+
+
+- ![image](https://github.com/user-attachments/assets/35b4c2d7-12f6-4e2e-8132-e76c45ea685f)
