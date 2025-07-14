@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
 from pathlib import Path
 from edc_python.rest_tools import RestConnector
@@ -15,6 +15,9 @@ class Connector(RestConnector):
         """
         :return: A connector object initialized with the given config file.
         """
+        if not config_file_path.exists():
+            raise RuntimeError(f"Config file '{config_file_path}' does not exist.")
+        
         connector_config = parse_config(config_file_path, ConnectorConfig)
         return Connector(connector_config)
 
@@ -25,7 +28,8 @@ class Connector(RestConnector):
         return self._config.bpn
     
     def get_dsp_url(self) -> str:
-        return self._config.dsp_url
+        return self._config.dsp_url    
+
 
     # ---------- Provider ----------
 
@@ -45,9 +49,9 @@ class Connector(RestConnector):
                 "@type": "DataAddress",
                 "type": "HttpData",
                 "baseUrl": asset_url,
-                "proxyQueryParams": True,
-                "proxyPath": True,
-                "proxyMethod": True
+                "proxyQueryParams": "true",
+                "proxyPath": "true",
+                "proxyMethod": "true"
             },
         }
 
@@ -78,7 +82,43 @@ class Connector(RestConnector):
         if response.status_code != 200:
             raise RuntimeError(f"Unable to get asset with id {asset_id}, status {response.status}: {response.text()}")
         return response.json()
+    
 
+    def get_all_assets(self,
+        offset: int = 0,
+        limit: int = 50
+    ) -> List:
+        """
+        Retrieves all created assets by posting a queryspec body to the assets request endpoint.
+        """
+        body = {
+            "@context": {
+                "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
+            },
+            "@type": "QuerySpec",
+            "offset": offset,
+            "limit": limit,
+            "sortOrder": "DESC",
+            "sortField": "fieldName",
+            "filterExpression": []
+        }
+
+        if not self._config.header_api_key:
+            raise RuntimeError("Provider config does not specify API key.")
+        
+        response = self._session.post(
+            f"{self._config.management_url}/assets/request",
+            headers={"x-api-key": self._config.header_api_key, "Content-Type": "application/json"},
+            json=body
+        )
+        if response.status_code != 200:
+            text = response.text()
+            raise RuntimeError(
+                f"Getting all assets failed with status {response.status_code}: {text}"
+            )
+        
+        return response.json()
+    
 
     def create_usage_policy(self,
         asset_id: str
@@ -157,7 +197,7 @@ class Connector(RestConnector):
     
     def get_policy_by_id(self, policy_id: str) -> Dict:
         """
-        GET an already created policy by its ID.
+        GET an already created policy by asset ID.
         """
         header_dict = {
             "x-api-key": self._config.header_api_key,
@@ -166,6 +206,32 @@ class Connector(RestConnector):
         response = self._session.get(f"{self._config.management_url}/policydefinitions/{policy_id}", headers=header_dict)
         if response.status_code != 200:
             raise RuntimeError(f"Unable to get policy with id {policy_id}, status {response.status_code}: {response.text()}")
+        return response.json()
+
+
+    def get_all_policies(self,
+        offset: int = 0,
+        limit: int = 50
+    ) -> Dict:
+        """
+        POST to get all already created policies.
+        """
+        header_dict = {
+            "x-api-key": self._config.header_api_key,
+            "Content-Type": "application/json"
+        }
+        body_dict = {
+            "@context": {
+                "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
+            },
+            "@type": "QuerySpec",
+            "offset": offset,
+            "limit": limit,
+            "filterExpression": []
+        }
+        response = self._session.post(f"{self._config.management_url}/policydefinitions/request", headers=header_dict, json=body_dict)
+        if response.status_code != 200:
+            raise RuntimeError(f"Unable to get policies by QuerySpec, status {response.status_code}: {response.text()}")
         return response.json()
 
 
@@ -218,23 +284,50 @@ class Connector(RestConnector):
         return response.json()
     
 
+    def get_all_contracts(self,
+        offset: int = 0,
+        limit: int = 50
+    ) -> Dict:
+        """
+        POST to get all already created contract definitions.
+        """
+        header_dict = {
+            "x-api-key": self._config.header_api_key,
+            "Content-Type": "application/json"
+        }
+        body_dict = {
+            "@context": {
+                "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
+            },
+            "@type": "QuerySpec",
+            "offset": offset,
+            "limit": limit,
+            "filterExpression": []
+        }
+        response = self._session.post(f"{self._config.management_url}/contractdefinitions/request", headers=header_dict, json=body_dict)
+        if response.status_code != 200:
+            raise RuntimeError(f"Unable to get contract definitions by QuerySpec, status {response.status_code}: {response.text()}")
+        return response.json()
+    
+
     # ---------- Consumer ----------
 
-    def read_policy_id_from_catalog(self,
+    def query_catalog(self,
         provider_connector: Connector,
-        asset_id: str
-    ) -> str:
+        offset: int = 0,
+        limit: int = 50
+    ) -> List:
         """
-        POST to the EDC catalog-request endpoint to retrieve the offer/policy ID for the given asset.
+        POST to the EDC catalog-request endpoint to retrieve all assets provided for the consumer.
         """
         body: Dict[str, Any] = {
             "@context": {"@vocab": "https://w3id.org/edc/v0.0.1/ns/"},
+            "@type": "CatalogRequest",
             "protocol": "dataspace-protocol-http",
             "counterPartyAddress": provider_connector.get_dsp_url(),
             "counterPartyId": provider_connector.get_business_partner_number(),
-            "querySpec": {"offset": 0, "limit": 50},
+            "querySpec": {"offset": offset, "limit": limit},
         }
-
         if not self._config.header_api_key:
             raise RuntimeError("consumer config does not specify API key")
 
@@ -243,16 +336,57 @@ class Connector(RestConnector):
             headers={"x-api-key": self._config.header_api_key, "Content-Type": "application/json"},
             json=body
         )
+
         if response.status_code != 200:
             text = response.text()
             raise RuntimeError(f"catalog request failed [{response.status_code}]: {text}")
         resp_json = response.json()
 
+        return resp_json.get("dcat:dataset", [])
+
+
+    def read_policy_id_from_catalog(self,
+        provider_connector: Connector,
+        asset_id: str,
+        offset: int = 0,
+        limit: int = 50
+    ) -> str:
+        """
+        POST to the EDC catalog-request endpoint to retrieve the offer/policy ID for the given asset.
+        """
+        # body: Dict[str, Any] = {
+        #     "@context": {"@vocab": "https://w3id.org/edc/v0.0.1/ns/"},
+        #     "protocol": "dataspace-protocol-http",
+        #     "counterPartyAddress": provider_connector.get_dsp_url(),
+        #     "counterPartyId": provider_connector.get_business_partner_number(),
+        #     "querySpec": {"offset": 0, "limit": 50},
+        # }
+
+        # if not self._config.header_api_key:
+        #     raise RuntimeError("consumer config does not specify API key")
+
+        # response = self._session.post(
+        #     f"{self._config.management_url}/catalog/request",
+        #     headers={"x-api-key": self._config.header_api_key, "Content-Type": "application/json"},
+        #     json=body
+        # )
+        # if response.status_code != 200:
+        #     text = response.text()
+        #     raise RuntimeError(f"catalog request failed [{response.status_code}]: {text}")
+        # resp_json = response.json()
+
+        dataset = self.query_catalog(provider_connector, offset, limit)
+
         # Find the offer ID for our asset
-        for entry in resp_json.get("dataset", []):
+        for entry in dataset:  # resp_json.get("dataset", []):
             if entry.get("id") == asset_id:
-                policy = entry.get("policy", {})
-                offer_id = policy.get("id")
+                policy = entry.get("odrl:hasPolicy", {})
+                if not policy:
+                    raise RuntimeError(f"No odrl:hasPolicy attribute for asset id '{asset_id}' found in catalog")
+                policy_type = policy.get("@type")
+                if not policy_type == "odrl:Offer":
+                    raise RuntimeError(f"Policy is not of type offer for asset id '{asset_id}' found in catalog")
+                offer_id = policy.get("@id")
                 if offer_id:
                     return offer_id
         raise RuntimeError(f"No policy for asset id '{asset_id}' found in catalog")
@@ -278,6 +412,7 @@ class Connector(RestConnector):
             "policy": {
                 "@id": offer_id,
                 "@type": "Offer",
+                "assigner": provider_connector.get_business_partner_number(),
                 "permission": [
                     {
                         "action": "use",
@@ -340,7 +475,7 @@ class Connector(RestConnector):
         # Find the transfer id for our asset
         for edr in resp_json:
             if edr.get("assetId") == asset_id:
-                transfer_id = edr.get("transferId")
+                transfer_id = edr.get("transferProcessId")
                 if transfer_id:
                     return transfer_id
         raise RuntimeError(f"No transfer id found for asset '{asset_id}' in EDR response")
