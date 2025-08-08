@@ -56,7 +56,8 @@ class Connector(RestConnector):
                 "baseUrl": asset_url,
                 "proxyQueryParams": "true",
                 "proxyPath": "true",
-                "proxyMethod": "true"
+                "proxyMethod": "true",
+                "proxyBody": "true"
             },
         }
 
