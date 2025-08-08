@@ -41,7 +41,12 @@ class Connector(RestConnector):
         POST to the EDC asset-creation endpoint.
         """
         body = {
-            "@context": {},
+            "@context": {
+                "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
+                "cx-common": "https://w3id.org/catenax/ontology/common#",
+                "cx-taxo": "https://w3id.org/catenax/taxonomy#",
+                "dct": "http://purl.org/dc/terms/"
+            },
             "@type": "Asset",
             "@id": asset_id,
             "properties": {"description": "informative description"},
