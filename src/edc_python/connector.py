@@ -41,7 +41,12 @@ class Connector(RestConnector):
         POST to the EDC asset-creation endpoint.
         """
         body = {
-            "@context": {},
+            "@context": {
+                "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
+                "cx-common": "https://w3id.org/catenax/ontology/common#",
+                "cx-taxo": "https://w3id.org/catenax/taxonomy#",
+                "dct": "http://purl.org/dc/terms/"
+            },
             "@type": "Asset",
             "@id": asset_id,
             "properties": {"description": "informative description"},
@@ -51,7 +56,8 @@ class Connector(RestConnector):
                 "baseUrl": asset_url,
                 "proxyQueryParams": "true",
                 "proxyPath": "true",
-                "proxyMethod": "true"
+                "proxyMethod": "true",
+                "proxyBody": "true"
             },
         }
 
@@ -64,7 +70,7 @@ class Connector(RestConnector):
             json=body,
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(
                 f"Asset creation failed with status {response.status_code}: {text}"
             )
@@ -80,7 +86,7 @@ class Connector(RestConnector):
         }
         response = self._session.get(f"{self._config.management_url}/assets/{asset_id}", headers=header_dict)
         if response.status_code != 200:
-            raise RuntimeError(f"Unable to get asset with id {asset_id}, status {response.status}: {response.text()}")
+            raise RuntimeError(f"Unable to get asset with id {asset_id}, status {response.status}: {response.text}")
         return response.json()
     
 
@@ -112,7 +118,7 @@ class Connector(RestConnector):
             json=body
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(
                 f"Getting all assets failed with status {response.status_code}: {text}"
             )
@@ -145,7 +151,7 @@ class Connector(RestConnector):
             json=body,
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(
                 f"Usage policy creation failed with status {response.status_code}: {text}"
             )
@@ -189,7 +195,7 @@ class Connector(RestConnector):
             json=body,
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(
                 f"Access policy creation failed with status {response.status_code}: {text}"
             )
@@ -205,7 +211,7 @@ class Connector(RestConnector):
         }
         response = self._session.get(f"{self._config.management_url}/policydefinitions/{policy_id}", headers=header_dict)
         if response.status_code != 200:
-            raise RuntimeError(f"Unable to get policy with id {policy_id}, status {response.status_code}: {response.text()}")
+            raise RuntimeError(f"Unable to get policy with id {policy_id}, status {response.status_code}: {response.text}")
         return response.json()
 
 
@@ -231,7 +237,7 @@ class Connector(RestConnector):
         }
         response = self._session.post(f"{self._config.management_url}/policydefinitions/request", headers=header_dict, json=body_dict)
         if response.status_code != 200:
-            raise RuntimeError(f"Unable to get policies by QuerySpec, status {response.status_code}: {response.text()}")
+            raise RuntimeError(f"Unable to get policies by QuerySpec, status {response.status_code}: {response.text}")
         return response.json()
 
 
@@ -264,7 +270,7 @@ class Connector(RestConnector):
             json=body,
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(
                 f"Contract creation failed with status {response.status_code}: {text}"
             )
@@ -280,7 +286,7 @@ class Connector(RestConnector):
         }
         response = self._session.get(f"{self._config.management_url}/contractdefinitions/{contract_id}", headers=header_dict)
         if response.status_code != 200:
-            raise RuntimeError(f"Unable to get contract with id {contract_id}, status {response.status_code}: {response.text()}")
+            raise RuntimeError(f"Unable to get contract with id {contract_id}, status {response.status_code}: {response.text}")
         return response.json()
     
 
@@ -306,7 +312,7 @@ class Connector(RestConnector):
         }
         response = self._session.post(f"{self._config.management_url}/contractdefinitions/request", headers=header_dict, json=body_dict)
         if response.status_code != 200:
-            raise RuntimeError(f"Unable to get contract definitions by QuerySpec, status {response.status_code}: {response.text()}")
+            raise RuntimeError(f"Unable to get contract definitions by QuerySpec, status {response.status_code}: {response.text}")
         return response.json()
     
 
@@ -338,7 +344,7 @@ class Connector(RestConnector):
         )
 
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(f"catalog request failed [{response.status_code}]: {text}")
         resp_json = response.json()
 
@@ -371,7 +377,7 @@ class Connector(RestConnector):
         #     json=body
         # )
         # if response.status_code != 200:
-        #     text = response.text()
+        #     text = response.text
         #     raise RuntimeError(f"catalog request failed [{response.status_code}]: {text}")
         # resp_json = response.json()
 
@@ -439,7 +445,7 @@ class Connector(RestConnector):
             json=body
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(f"EDR negotiation failed [{response.status_code}]: {text}")
 
 
@@ -468,7 +474,7 @@ class Connector(RestConnector):
             json=body
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(f"EDR request failed [{response.status_code}]: {text}")
         resp_json = response.json()
 
@@ -495,7 +501,7 @@ class Connector(RestConnector):
             headers={"x-api-key": self._config.header_api_key, "Content-Type": "application/json"}
         )
         if response.status_code != 200:
-            text = response.text()
+            text = response.text
             raise RuntimeError(f"EDR read failed [{response.status_code}]: {text}")
         data = response.json()
 
